@@ -291,7 +291,7 @@ Hiện mới có kiểm thử mức module. Chưa có testbench mức CPU và ch
 
 ## 11. Tác giả
 
-**Nguyễn Thành Trung** — MSSV: 23119117
+**Nguyễn Thành Trung**
 Ngành Kỹ thuật Máy tính, Đồ án Môn học 2
 
 [![GitHub](https://img.shields.io/badge/GitHub-thanhchun2005--blip-black?logo=github)](https://github.com/thanhchun2005-blip)
