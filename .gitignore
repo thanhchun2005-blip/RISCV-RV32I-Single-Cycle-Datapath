@@ -1,0 +1,9 @@
+vivado/
+*.jou
+*.log
+*.str
+*.bak
+.Xil/
+xsim.dir/
+*.wdb
+*.backup.*

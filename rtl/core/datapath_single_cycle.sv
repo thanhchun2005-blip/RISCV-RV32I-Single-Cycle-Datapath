@@ -1,4 +1,4 @@
-﻿`timescale 1ns / 1ps
+`timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Module Name: datapath_single_cycle
 // Description: Ket noi toan bo 8 module thanh CPU Single-Cycle RV32I
@@ -24,7 +24,10 @@ module datapath_single_cycle (
     // =========================================================
     // OPCODE CONSTANTS (RV32I)
     // =========================================================
+    localparam logic [6:0] OPCODE_LUI   = 7'b0110111;
     localparam logic [6:0] OPCODE_AUIPC = 7'b0010111;
+    localparam logic [6:0] OPCODE_JAL   = 7'b1101111;
+    localparam logic [6:0] OPCODE_JALR  = 7'b1100111;
 
     // =========================================================
     // 1. Khai bao cac day noi bo
@@ -34,6 +37,9 @@ module datapath_single_cycle (
     logic [31:0] pc_current;
     logic [31:0] pc_next;
     logic [31:0] pc_plus4;
+    logic [31:0] pc_branch;    // PC + imm (Branch / JAL)
+    logic [31:0] pc_jalr;      // (rs1 + imm) & ~1
+    logic        branch_taken;
 
     // --- Instruction fields ---
     logic [31:0] instruction;
@@ -54,7 +60,7 @@ module datapath_single_cycle (
     logic [31:0] alu_B;
     logic [31:0] alu_result;
 
-    // --- Data RAM ---
+    // --- Data RAM ---a
     logic [31:0] ram_read_data;
 
     // --- Write-Back ---
@@ -92,8 +98,28 @@ module datapath_single_cycle (
     //    (Branch/Jump se duoc them o buoc tich hop Pipeline)
     // =========================================================
 
-    assign pc_plus4 = pc_current + 32'd4;
-    assign pc_next  = pc_plus4;
+    assign pc_plus4  = pc_current + 32'd4;
+    assign pc_branch = pc_current + immediate;
+    assign pc_jalr   = (read_data1 + immediate) & ~32'd1;
+
+    branch_comp u_branch_comp (
+        .op_a        (read_data1),
+        .op_b        (read_data2),
+        .funct3      (funct3),
+        .Branch      (branch),
+        .branch_taken(branch_taken)
+    );
+
+    always_comb begin
+        if (jump && (opcode == OPCODE_JALR))
+            pc_next = pc_jalr;
+        else if (jump && (opcode == OPCODE_JAL))
+            pc_next = pc_branch;
+        else if (branch_taken)
+            pc_next = pc_branch;
+        else
+            pc_next = pc_plus4;
+    end
 
     pc u_pc (
         .clk    (clk),
@@ -133,13 +159,13 @@ module datapath_single_cycle (
 
     // =========================================================
     // 6. Register File
-    //    Chu y: reg_file dung port 'rst' (active-high)
+    //    Chu y: reg_file dung port 'rst'
     //    -> dung ~rst_n de chuyen doi cuc
     // =========================================================
 
     reg_file u_regfile (
         .clk      (clk),
-        .rst      (~rst_n),
+        .rst      (rst_n),   // reg_file dung reset active-low
         .rs1      (rs1),
         .rs2      (rs2),
         .rd       (rd),
@@ -176,11 +202,12 @@ module datapath_single_cycle (
     // =========================================================
     // 9. ALU Input MUX
     //    MUX A: AUIPC can PC lam toan hang A (PC + imm)
-    //           Tat ca lenh khac dung rs1
     //    MUX B: alu_src=1 -> immediate, alu_src=0 -> rs2
     // =========================================================
 
-    assign alu_A = (opcode == OPCODE_AUIPC) ? pc_current : read_data1;
+    assign alu_A = (opcode == OPCODE_AUIPC) ? pc_current :
+                   (opcode == OPCODE_LUI)   ? 32'd0      :
+                                              read_data1;
     assign alu_B = alu_src ? immediate : read_data2;
 
 
