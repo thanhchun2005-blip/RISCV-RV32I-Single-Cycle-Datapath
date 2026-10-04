@@ -14,8 +14,13 @@ set_property top riscv_single_cycle_top [get_filesets sources_1]
 
 # Simulation sources
 add_files -fileset sim_1 -norecurse [glob $root/testbench/unit_tests/*.sv]
+add_files -fileset sim_1 -norecurse $root/testbench/riscv_single_cycle_tb.sv
 set_property file_type SystemVerilog [get_files -of_objects [get_filesets sim_1] *.sv]
-set_property top ALU_tb [get_filesets sim_1]
+set_property top riscv_single_cycle_tb [get_filesets sim_1]
+
+# Mac dinh xsim chi chay 1000ns -> TB (chay hang tram nghin ns) bi dung giua chung.
+# Chay den khi gap $finish de in PASS/FAIL ra Tcl console.
+set_property -name {xsim.simulate.runtime} -value {all} -objects [get_filesets sim_1]
 
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
